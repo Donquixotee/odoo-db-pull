@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Odoo DB Pull</title>
+
+  <!-- AlpineJS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <!-- Local App logic -->
+  <link rel="stylesheet" href="/static/style.css"/>
+  <script src="/static/app.js"></script>
+
+  <script src="/static/tailwind-config.js"></script>
+
+  <script>
+    // Embed python default values used by app.js config
+    window.__defaults__ = {
+      defaultPgUser: "{{ default_pg_user }}",
+      localFilestoreBase: "{{ local_filestore_base | replace('\\', '\\\\') }}",
+    };
+  </script>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30 min-h-screen" x-data="pullApp()" x-init="init()" x-cloak>
+
+  <!-- SIDEBAR (Desktop) -->
+  <aside class="h-screen w-64 fixed left-0 top-0 bg-[#10131a] flex flex-col gap-4 p-4 border-r border-[#22262f]/15 font-label text-sm z-40 hidden md:flex pt-8">
+    <div class="mb-8 px-2">
+      <h1 class="text-lg font-black text-[#bd9dff] tracking-tighter">Odoo DB Pull</h1>
+      <p class="text-[10px] uppercase tracking-[0.2em] opacity-50 text-[#ecedf6]">Data Architect</p>
+    </div>
+    
+    <nav class="space-y-2">
+      <!-- Nav Item 1 -->
+      <div class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
+           :class="currentStep === 0 ? 'bg-gradient-to-r from-[#bd9dff] to-[#8a4cfc] text-white shadow-[0_0_15px_rgba(189,157,255,0.3)] font-bold' : 'text-[#ecedf6] opacity-60 hover:opacity-100 hover:bg-[#161a21] cursor-pointer'"
+           @click="currentStep = 0">
+        <span class="material-symbols-outlined" :class="{ 'filled': currentStep === 0 }">power</span>
+        <span>Connect</span>
+      </div>
+      <!-- Nav Item 2 -->
+      <div class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
+           :class="currentStep === 1 ? 'bg-gradient-to-r from-[#bd9dff] to-[#8a4cfc] text-white shadow-[0_0_15px_rgba(189,157,255,0.3)] font-bold' : (!connectedAlias ? 'opacity-30 cursor-not-allowed' : 'text-[#ecedf6] opacity-60 hover:opacity-100 hover:bg-[#161a21] cursor-pointer')"
+           @click="if(connectedAlias) currentStep = 1">
+        <span class="material-symbols-outlined" :class="{ 'filled': currentStep === 1 }">database</span>
+        <span>Select DB</span>
+      </div>
+      <!-- Nav Item 3 -->
+      <div class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
+           :class="currentStep === 2 ? 'bg-gradient-to-r from-[#bd9dff] to-[#8a4cfc] text-white shadow-[0_0_15px_rgba(189,157,255,0.3)] font-bold' : (!form.sourceDb ? 'opacity-30 cursor-not-allowed' : 'text-[#ecedf6] opacity-60 hover:opacity-100 hover:bg-[#161a21] cursor-pointer')"
+           @click="if(form.sourceDb) currentStep = 2">
+        <span class="material-symbols-outlined" :class="{ 'filled': currentStep === 2 }">settings_input_component</span>
+        <span>Configure</span>
+      </div>
+      <!-- Nav Item 4 -->
+      <div class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
+           :class="currentStep === 3 ? 'bg-gradient-to-r from-[#bd9dff] to-[#8a4cfc] text-white shadow-[0_0_15px_rgba(189,157,255,0.3)] font-bold' : (currentStep < 3 ? 'opacity-30 cursor-not-allowed' : 'text-[#ecedf6] opacity-60 hover:opacity-100 hover:bg-[#161a21] cursor-pointer')"
+           @click="if(currentStep === 3) currentStep = 3">
+        <span class="material-symbols-outlined" :class="{ 'filled': currentStep === 3 }">cloud_download</span>
+        <span>Pulling</span>
+      </div>
+    </nav>
+    
+    <div class="mt-auto p-4 bg-surface-container-low rounded-xl ghost-border">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+          <span class="material-symbols-outlined text-primary text-sm">account_circle</span>
+        </div>
+        <div>
+          <p class="text-xs font-bold text-on-surface">Data Architect</p>
+          <p class="text-[10px] text-on-surface-variant flex gap-1 items-center" x-show="connectedAlias">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            <span x-text="connectedAlias"></span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- TOP APP BAR -->
+  <header class="w-full sticky top-0 z-50 bg-[#10131a] flex justify-between items-center px-6 py-4 md:pl-72">
+    <div class="flex items-center gap-4">
+      <span class="text-xl font-bold tracking-tighter text-[#ecedf6] font-headline md:hidden">Odoo DB Pull</span>
+      <span class="text-xl font-bold tracking-tighter text-[#ecedf6] font-headline hidden md:block">Dashboard</span>
+    </div>
+  </header>
+
+  <!-- BACKGROUND DECORATIONS -->
+  <div class="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+  <div class="fixed bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+
+  <!-- MAIN CANVAS -->
+  <main class="md:pl-64 pt-8 pb-24 px-6 flex flex-col items-center min-h-[calc(100vh-72px)]">
+
+    <!-- STEPPER GRAPHIC -->
+    <div class="w-full max-w-3xl mb-12 relative px-4 mx-auto flex items-start justify-between">
+      <div class="absolute top-[18px] left-[40px] right-[40px] h-[2px] bg-surface-container-highest z-0"></div>
+      
+      <!-- Stepper Item 1 -->
+      <div class="flex flex-col items-center gap-3 relative z-10 w-20">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
+             :class="currentStep > 0 ? 'bg-primary text-on-primary-fixed shadow-[0_0_15px_rgba(189,157,255,0.4)]' : (currentStep === 0 ? 'bg-primary-dim text-white ring-4 ring-primary/20 shadow-[0_0_20px_rgba(138,76,252,0.5)]' : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/30')">
+          <span class="material-symbols-outlined" x-text="currentStep > 0 ? 'check' : 'power'" :class="{'filled': currentStep >= 0}"></span>
+        </div>
+        <span class="text-[10px] font-label font-bold uppercase tracking-widest text-center"
+              :class="currentStep >= 0 ? 'text-primary' : 'text-on-surface-variant/60'">Connect</span>
+      </div>
+
+      <div class="step-connector" :class="{'active': currentStep > 0}"></div>
+
+      <!-- Stepper Item 2 -->
+      <div class="flex flex-col items-center gap-3 relative z-10 w-20">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
+             :class="currentStep > 1 ? 'bg-primary text-on-primary-fixed shadow-[0_0_15px_rgba(189,157,255,0.4)]' : (currentStep === 1 ? 'bg-primary-dim text-white ring-4 ring-primary/20 shadow-[0_0_20px_rgba(138,76,252,0.5)]' : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/30')">
+          <span class="material-symbols-outlined" x-text="currentStep > 1 ? 'check' : 'database'" :class="{'filled': currentStep >= 1}"></span>
+        </div>
+        <span class="text-[10px] font-label font-bold uppercase tracking-widest text-center"
+              :class="currentStep >= 1 ? 'text-primary' : 'text-on-surface-variant/60'">Select DB</span>
+      </div>
+
+      <div class="step-connector" :class="{'active': currentStep > 1}"></div>
+
+      <!-- Stepper Item 3 -->
+      <div class="flex flex-col items-center gap-3 relative z-10 w-20">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
+             :class="currentStep > 2 ? 'bg-primary text-on-primary-fixed shadow-[0_0_15px_rgba(189,157,255,0.4)]' : (currentStep === 2 ? 'bg-primary-dim text-white ring-4 ring-primary/20 shadow-[0_0_20px_rgba(138,76,252,0.5)]' : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/30')">
+          <span class="material-symbols-outlined" x-text="currentStep > 2 ? 'check' : 'settings_input_component'" :class="{'filled': currentStep >= 2}"></span>
+        </div>
+        <span class="text-[10px] font-label font-bold uppercase tracking-widest text-center"
+              :class="currentStep >= 2 ? 'text-primary' : 'text-on-surface-variant/60'">Configure</span>
+      </div>
+
+      <div class="step-connector" :class="{'active': currentStep > 2}"></div>
+
+      <!-- Stepper Item 4 -->
+      <div class="flex flex-col items-center gap-3 relative z-10 w-20">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
+             :class="currentStep === 3 ? 'bg-[#390083] text-primary border-2 border-primary shadow-[0_0_20px_rgba(189,157,255,0.6)]' : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/30'">
+          <span class="material-symbols-outlined" :class="{'filled': currentStep === 3}">cloud_download</span>
+        </div>
+        <span class="text-[10px] font-label font-bold uppercase tracking-widest text-center"
+              :class="currentStep === 3 ? 'text-primary' : 'text-on-surface-variant/60'">Pulling</span>
+      </div>
+    </div>
+
+    <!-- ERROR BANNER -->
+    <div x-show="error" class="w-full max-w-3xl mb-8 p-4 bg-error-container text-on-error-container rounded-xl flex items-center gap-3 font-body text-sm border border-error-dim/30">
+      <span class="material-symbols-outlined">error</span>
+      <span x-text="error" class="flex-1"></span>
+    </div>
+
+    {% include 'steps/step0_connect.html' %}
+
+    {% include 'steps/step1_select_db.html' %}
+
+    {% include 'steps/step2_configure.html' %}
+
+    {% include 'steps/step3_pull_progress.html' %}
+
+  </main>
+
+  <!-- MOBILE NAV BOTTOM -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-panel flex justify-around items-center p-3 z-50 border-t border-outline-variant/10">
+    <div class="flex flex-col items-center gap-1 transition-colors" :class="currentStep === 0 ? 'text-primary' : 'text-on-surface/50'" @click="currentStep = 0">
+      <span class="material-symbols-outlined">power</span>
+      <span class="text-[10px] font-label font-bold">Connect</span>
+    </div>
+    <div class="flex flex-col items-center gap-1 transition-colors" :class="currentStep === 1 ? 'text-primary' : 'text-on-surface/50'" @click="if(connectedAlias) currentStep = 1">
+      <span class="material-symbols-outlined">database</span>
+      <span class="text-[10px] font-label font-bold">Select DB</span>
+    </div>
+    <div class="flex flex-col items-center gap-1 transition-colors" :class="currentStep === 2 ? 'text-primary' : 'text-on-surface/50'" @click="if(form.sourceDb) currentStep = 2">
+      <span class="material-symbols-outlined">settings_input_component</span>
+      <span class="text-[10px] font-label font-bold">Config</span>
+    </div>
+    <div class="flex flex-col items-center gap-1 transition-colors" :class="currentStep === 3 ? 'text-primary' : 'text-on-surface/50'" @click="if(currentStep === 3) currentStep = 3">
+      <span class="material-symbols-outlined">cloud_download</span>
+      <span class="text-[10px] font-label font-bold">Pull</span>
+    </div>
+  </nav>
+
+</body>
+</html>

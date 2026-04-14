@@ -1,0 +1,360 @@
+    <!-- ────────────────────────────────────────────────────────────────────────
+         STEP 2: CONFIGURE
+         ──────────────────────────────────────────────────────────────────────── -->
+    <div x-show="currentStep === 2" class="w-full max-w-3xl space-y-8" x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0">
+      
+      <header class="text-center">
+        <h1 class="text-4xl font-extrabold font-headline tracking-tight text-on-surface mb-2">Configure the Pull</h1>
+        <p class="text-on-surface-variant font-body">Map your destination environment and sync parameters.</p>
+      </header>
+
+      <!-- Summary Card -->
+      <div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10 flex items-center justify-between">
+        <div class="flex flex-col gap-1">
+          <span class="text-[10px] font-label font-bold text-outline uppercase tracking-widest">Source Origin</span>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-sm">cloud</span>
+            <span class="font-mono text-sm text-on-surface" x-text="form.sourceDb"></span>
+          </div>
+        </div>
+        <div class="flex-1 flex justify-center">
+          <div class="flex items-center gap-3 opacity-60">
+            <div class="h-[2px] w-12 bg-outline-variant/30"></div>
+            <span class="material-symbols-outlined text-outline-variant">forward</span>
+            <div class="h-[2px] w-12 bg-outline-variant/30"></div>
+          </div>
+        </div>
+        <div class="flex flex-col items-end gap-1 text-right">
+          <span class="text-[10px] font-label font-bold text-outline uppercase tracking-widest">Target DB Name</span>
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-sm text-primary" x-text="form.targetDbName || form.sourceDb"></span>
+            <span class="material-symbols-outlined text-primary text-sm">computer</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <!-- ── Target Environment Section ──────────────────────────────────── -->
+        <section class="bg-surface-container p-8 rounded-2xl border border-outline-variant/5 shadow-lg">
+          <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+            <h3 class="text-lg font-bold font-headline flex items-center gap-3">
+              <span class="material-symbols-outlined text-primary">storage</span> Target Environment
+            </h3>
+            
+            <div class="bg-surface-container-lowest p-1 rounded-lg flex font-label text-xs">
+              <button @click="targetMode = 'local'; localPgMode = 'native'" class="px-3 py-1.5 rounded-md font-bold transition-colors" :class="targetMode === 'local' ? 'bg-surface-container-highest text-on-surface' : 'text-on-surface-variant hover:text-on-surface'">LOCAL</button>
+              <button @click="targetMode = 'same_server'; localPgMode = 'docker'; form.targetPgContainer = selectedPairInfo ? selectedPairInfo.db : ''" class="px-3 py-1.5 rounded-md font-bold transition-colors" :class="targetMode === 'same_server' ? 'bg-surface-container-highest text-on-surface' : 'text-on-surface-variant hover:text-on-surface'">SAME SERVER</button>
+              <button @click="targetMode = 'remote'; localPgMode = 'docker'" class="px-3 py-1.5 rounded-md font-bold transition-colors" :class="targetMode === 'remote' ? 'bg-surface-container-highest text-on-surface' : 'text-on-surface-variant hover:text-on-surface'">ANOTHER SERVER</button>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-12 gap-6">
+            <!-- Target Connection Mode (Native vs Docker) -->
+            <template x-if="targetMode === 'local'">
+                <div class="col-span-12 mb-2 flex justify-end">
+                    <div class="bg-surface-container-lowest p-1 rounded-lg flex font-label text-xs inline-flex">
+                        <button @click="localPgMode = 'native'" class="px-4 py-1.5 rounded-md font-bold transition-colors" :class="localPgMode === 'native' ? 'bg-surface-container-highest text-on-surface' : 'text-on-surface-variant hover:text-on-surface'">NATIVE POSTGRES</button>
+                        <button @click="localPgMode = 'docker'" class="px-4 py-1.5 rounded-md font-bold transition-colors" :class="localPgMode === 'docker' ? 'bg-surface-container-highest text-on-surface' : 'text-on-surface-variant hover:text-on-surface'">DOCKER CONTAINER</button>
+                    </div>
+                </div>
+            </template>
+            
+            <!-- Target Remote SSH Details -->
+            <template x-if="targetMode === 'remote'">
+              <div class="col-span-12 space-y-4 mb-6 p-4 border border-primary/20 rounded-xl bg-primary/5">
+                <h4 class="font-bold text-sm text-primary">Target SSH Details</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <label class="block text-xs font-label">SSH Alias</label>
+                    <div class="relative">
+                      <select x-model="form.targetSshAlias" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface cursor-pointer">
+                        <option value="">— Enter manual —</option>
+                        <template x-for="h in sshHosts" :key="h.alias">
+                          <option :value="h.alias" x-text="h.alias"></option>
+                        </template>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="space-y-2" x-show="!form.targetSshAlias">
+                    <label class="block text-xs font-label">Host / IP</label>
+                    <input x-model="form.targetSshHost" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface font-mono" type="text" placeholder="target.server.com" />
+                  </div>
+                  <div class="space-y-2" x-show="!form.targetSshAlias">
+                    <label class="block text-xs font-label">User</label>
+                    <input x-model="form.targetSshUser" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface font-mono" type="text" placeholder="root" />
+                  </div>
+                  <div class="space-y-2" x-show="!form.targetSshAlias">
+                    <label class="block text-xs font-label text-outline flex justify-between">Password <span>Optional</span></label>
+                    <input x-model="form.targetSshPassword" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface font-mono" type="password" />
+                  </div>
+                </div>
+                <div>
+                  <button @click="discoverTarget" :disabled="targetSshLoading" class="mt-2 px-4 py-2 bg-primary text-on-primary-fixed rounded-lg text-xs font-bold font-label flex items-center gap-2">
+                     <span x-show="targetSshLoading" class="material-symbols-outlined animate-spin text-sm">refresh</span>
+                     <span x-text="targetSshLoading ? 'Connecting...' : 'Connect Target & Fetch Containers'"></span>
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <!-- Native Mode Fields (Local only) -->
+            <template x-if="localPgMode === 'native'">
+              <div class="col-span-12 grid grid-cols-12 gap-6" style="display: contents;">
+                <div class="col-span-8">
+                  <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">Host Address</label>
+                  <input x-model="form.targetPgHost" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm focus:ring-1 focus:ring-primary focus:bg-surface-container-high transition-all text-on-surface" type="text"/>
+                </div>
+                <div class="col-span-4">
+                  <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">Port</label>
+                  <input x-model.number="form.targetPgPort" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm focus:ring-1 focus:ring-primary focus:bg-surface-container-high transition-all text-on-surface" type="number"/>
+                </div>
+              </div>
+            </template>
+            
+            <!-- Docker Mode Fields -->
+            <template x-if="localPgMode === 'docker'">
+              <div class="col-span-12">
+                <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">Target Postgres Container</label>
+                
+                <template x-if="targetMode === 'local'">
+                  <div>
+                      <div x-show="localDockerContainers.length === 0" class="text-error text-sm font-mono p-3 bg-error-container/20 rounded-lg">No postgres containers found locally. Verify Docker runs.</div>
+                      <select x-show="localDockerContainers.length > 0" x-model="form.targetPgContainer" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm focus:ring-1 focus:ring-primary focus:bg-surface-container-high transition-all text-on-surface cursor-pointer">
+                        <option value="">— Select a container —</option>
+                        <template x-for="c in localDockerContainers" :key="c.name">
+                          <option :value="c.name" x-text="c.name + ' (' + c.image + ')'"></option>
+                        </template>
+                      </select>
+                  </div>
+                </template>
+
+                <template x-if="targetMode === 'same_server'">
+                    <input x-model="form.targetPgContainer" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm text-on-surface" type="text" placeholder="e.g. odoo_db_1" />
+                </template>
+
+                <template x-if="targetMode === 'remote'">
+                  <div>
+                      <div class="flex gap-2">
+                        <select x-model="form.targetSelectedPair" @change="form.targetPgContainer = targetPairs.find(p => p.odoo === form.targetSelectedPair)?.db || ''" class="w-1/2 bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm text-on-surface cursor-pointer">
+                          <option value="">— Select Detected Odoo Pair —</option>
+                          <template x-for="p in targetPairs" :key="p.odoo">
+                            <option :value="p.odoo" x-text="p.odoo + ' (DB: ' + p.db + ')'"></option>
+                          </template>
+                        </select>
+                        <input x-model="form.targetPgContainer" class="w-1/2 bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm text-on-surface" type="text" placeholder="Or enter container manually" />
+                      </div>
+                  </div>
+                </template>
+
+              </div>
+            </template>
+
+            <div class="col-span-6">
+              <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">Target DB User</label>
+              <input x-model="form.targetPgUser" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm focus:ring-1 focus:ring-primary focus:bg-surface-container-high transition-all text-on-surface" type="text" placeholder="postgres"/>
+            </div>
+            <div class="col-span-6">
+              <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">Target Password <span class="lowercase tracking-normal font-normal opacity-60">(leave blank for trust)</span></label>
+              <input x-model="form.targetPgPassword" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm focus:ring-1 focus:ring-primary focus:bg-surface-container-high transition-all text-on-surface" type="password" placeholder="••••••••"/>
+            </div>
+            
+            <div class="col-span-12 pt-4 border-t border-outline-variant/10 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">Target DB Name</label>
+                <input x-model="form.targetDbName" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm focus:ring-1 focus:ring-primary focus:bg-surface-container-high transition-all text-primary" placeholder="Target database name" type="text"/>
+              </div>
+              
+              <div>
+                <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">Rename Existing To <span class="lowercase tracking-normal font-normal opacity-60">(leave blank to skip)</span></label>
+                <input x-model="form.renameExistingTo" x-bind:disabled="targetMode !== 'local'" class="w-full bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm focus:ring-1 focus:ring-primary focus:bg-surface-container-high transition-all text-on-surface disabled:opacity-50" placeholder="e.g. my_database_old" type="text"/>
+                <p x-show="targetMode !== 'local'" class="text-[10px] text-outline mt-1">Renaming only supported for pure Local mode.</p>
+              </div>
+            </div>
+            
+          </div>
+        </section>
+
+        <!-- ── Filestore Section ────────────────────────────────────────────── -->
+        <section class="bg-surface-container p-8 rounded-2xl border border-outline-variant/5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold font-headline flex items-center gap-3">
+              <span class="material-symbols-outlined text-tertiary">folder_zip</span> Filestore Deploy
+              <span class="text-xs font-normal font-body text-outline opacity-70">(optional)</span>
+            </h3>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" x-model="filestore.enabled" class="sr-only peer"/>
+              <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tertiary"></div>
+              <span class="ml-3 text-xs font-label font-bold text-outline uppercase" x-text="filestore.enabled ? 'Enabled' : 'Disabled'"></span>
+            </label>
+          </div>
+
+          <!-- Instruction hint (collapsed state) -->
+          <div x-show="!filestore.enabled" class="text-sm text-on-surface-variant/60 italic py-2">
+            On your source server, run:<br/>
+            <code class="font-mono text-xs text-tertiary/80 bg-surface-container-highest px-2 py-1 rounded mt-1 inline-block"
+                  x-text="'tar czf /tmp/' + (form.sourceDb || 'mydb') + '_filestore.tar.gz -C /var/lib/odoo/filestore ' + (form.sourceDb || 'mydb')">
+            </code><br/>
+            <span class="text-xs mt-1 inline-block">Then enable this section and click <strong>Deploy Filestore</strong>.</span>
+          </div>
+
+          <div x-show="filestore.enabled" x-transition class="space-y-5 mt-2">
+
+            <!-- Context badge: shows which target mode is in use -->
+            <div class="flex items-center gap-2 p-3 rounded-lg bg-tertiary/10 border border-tertiary/20 text-xs font-label">
+              <span class="material-symbols-outlined text-tertiary text-sm">info</span>
+              <span class="text-on-surface-variant">
+                Filestore will deploy to the
+                <strong class="text-tertiary" x-text="{
+                  local: localPgMode === 'docker' ? 'local Docker container' : 'local filesystem',
+                  same_server: 'same server as DB source',
+                  remote: 'remote target server'
+                }[targetMode] || targetMode"></strong>
+                — matching your DB pull destination. No credentials to re-enter.
+              </span>
+            </div>
+
+            <!-- Tar file path (on the SOURCE server) -->
+            <div>
+              <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">
+                Tar File Path on Source Server
+              </label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-4 flex items-center">
+                  <span class="material-symbols-outlined text-outline text-lg">folder_zip</span>
+                </div>
+                <input x-model="filestore.tarPath"
+                       class="w-full bg-surface-container-lowest border-none rounded-lg pl-12 pr-4 py-3 font-mono text-sm text-on-surface focus:ring-1 focus:ring-tertiary transition-all"
+                       type="text"
+                       :placeholder="'/tmp/' + (form.sourceDb || 'mydb') + '_filestore.tar.gz'"/>
+              </div>
+              <p class="text-[10px] text-outline mt-1 italic">
+                The app connects to the source server and downloads this automatically.
+              </p>
+            </div>
+
+            <!-- DB/folder name (auto-filled from targetDbName) -->
+            <div>
+              <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">
+                Filestore Folder Name <span class="lowercase tracking-normal font-normal opacity-60">(= target DB name, auto-filled)</span>
+              </label>
+              <input x-model="filestore.dbName"
+                     class="w-full bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm text-on-surface focus:ring-1 focus:ring-tertiary transition-all"
+                     type="text"
+                     :placeholder="form.targetDbName || form.sourceDb || 'mydb'"/>
+            </div>
+
+            <!-- ── LOCAL target: filesystem path ─────────────────────────── -->
+            <template x-if="targetMode === 'local' && localPgMode === 'native'">
+              <div>
+                <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">
+                  Local Filestore Parent Dir
+                  <span class="lowercase tracking-normal font-normal opacity-60">(the <code>db_name</code> subfolder will be placed here)</span>
+                </label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-4 flex items-center">
+                    <span class="material-symbols-outlined text-outline text-lg">folder_open</span>
+                  </div>
+                  <input x-model="filestore.targetLocalPath"
+                         class="w-full bg-surface-container-lowest border-none rounded-lg pl-12 pr-4 py-3 font-mono text-sm text-on-surface focus:ring-1 focus:ring-tertiary transition-all"
+                         type="text"
+                         placeholder="~/.local/share/Odoo/filestore"/>
+                </div>
+                <p class="text-[10px] text-outline mt-1">
+                  Result: <span class="font-mono text-tertiary/80" x-text="(filestore.targetLocalPath || '…') + '/' + (filestore.dbName || form.targetDbName || '…')"></span>
+                </p>
+              </div>
+            </template>
+
+            <!-- ── LOCAL target: docker container ────────────────────────── -->
+            <template x-if="targetMode === 'local' && localPgMode === 'docker'">
+              <div class="space-y-4 p-4 border border-tertiary/20 rounded-xl bg-tertiary/5">
+                <p class="text-xs text-on-surface-variant">
+                  The filestore will be copied into the same Docker container selected above
+                  (<strong class="font-mono text-tertiary" x-text="form.targetPgContainer || '—'"></strong>).
+                </p>
+                <div>
+                  <label class="block text-xs font-label mb-1">Internal Filestore Path <span class="opacity-60">(inside container)</span></label>
+                  <input x-model="filestore.targetDockerInternalPath"
+                         class="w-full bg-surface-container-lowest border-none rounded-lg p-3 font-mono text-sm text-on-surface focus:ring-1 focus:ring-tertiary transition-all"
+                         type="text"
+                         placeholder="/var/lib/odoo/filestore"/>
+                  <p class="text-[10px] text-outline mt-1">
+                    Result: <span class="font-mono text-tertiary/80" x-text="(filestore.targetDockerInternalPath || '/var/lib/odoo/filestore') + '/' + (filestore.dbName || form.targetDbName || '…')"></span>
+                  </p>
+                </div>
+              </div>
+            </template>
+
+            <!-- ── SAME_SERVER or REMOTE target: server path + sudo ──────── -->
+            <template x-if="targetMode === 'same_server' || targetMode === 'remote'">
+              <div class="space-y-4 p-4 border border-tertiary/20 rounded-xl bg-tertiary/5">
+                <!-- Show which server this will go to -->
+                <p class="text-xs text-on-surface-variant">
+                  <template x-if="targetMode === 'same_server'">
+                    <span>Deploying on source server <strong class="font-mono text-tertiary" x-text="form.alias || form.host"></strong>.</span>
+                  </template>
+                  <template x-if="targetMode === 'remote'">
+                    <span>Deploying on target server <strong class="font-mono text-tertiary" x-text="form.targetSshAlias || form.targetSshHost"></strong>.</span>
+                  </template>
+                </p>
+
+                <!-- Filestore base path on the server -->
+                <div>
+                  <label class="block text-xs font-label font-bold text-outline uppercase tracking-widest mb-2">
+                    Filestore Base Dir on Server
+                  </label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-4 flex items-center">
+                      <span class="material-symbols-outlined text-outline text-lg">dns</span>
+                    </div>
+                    <input x-model="filestore.targetServerPath"
+                           class="w-full bg-surface-container-lowest border-none rounded-lg pl-12 pr-4 py-3 font-mono text-sm text-on-surface focus:ring-1 focus:ring-tertiary transition-all"
+                           type="text"
+                           placeholder="/var/lib/odoo/filestore"/>
+                  </div>
+                  <p class="text-[10px] text-outline mt-1">
+                    Result: <span class="font-mono text-tertiary/80" x-text="(filestore.targetServerPath || '…') + '/' + (filestore.dbName || form.targetDbName || '…')"></span>
+                  </p>
+                </div>
+
+                <!-- Sudo password -->
+                <div>
+                  <label class="block text-xs font-label mb-1 flex justify-between">
+                    Sudo Password
+                    <span class="opacity-60 text-amber-400">Needed to write to /var/lib/odoo/</span>
+                  </label>
+                  <input x-model="filestore.sudoPassword"
+                         class="w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface font-mono text-sm"
+                         type="password" placeholder="••••••••"/>
+                  <p class="text-[10px] text-outline mt-1 italic">
+                    Extracts to <code class="text-tertiary/80">/tmp</code> first, then <code class="text-tertiary/80">sudo mv</code> + <code class="text-tertiary/80">sudo chown odoo</code>.
+                  </p>
+                </div>
+              </div>
+            </template>
+
+            <!-- Filestore Deploy Button -->
+
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Action Area -->
+      <div class="pt-8 flex flex-col items-center gap-6">
+        <button @click="startPull" class="w-full py-5 btn-primary-gradient text-on-primary-fixed font-headline font-extrabold text-lg rounded-xl shadow-[0_0_30px_rgba(189,157,255,0.2)] hover:scale-[1.01] transition-transform flex items-center justify-center gap-3 group">
+          <span x-text="filestore.enabled ? 'Pull Database + Filestore' : 'Start Database Pull'"></span>
+          <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">rocket_launch</span>
+        </button>
+        <div x-show="filestore.enabled" class="flex items-center gap-2 text-xs text-outline font-label">
+          <span class="material-symbols-outlined text-tertiary text-[14px]">folder_zip</span>
+          Filestore will deploy automatically after DB pull completes
+        </div>
+        <button @click="currentStep = 1" class="hover:text-primary transition-colors flex items-center gap-2 text-outline text-xs font-label">
+          <span class="material-symbols-outlined text-[16px]">keyboard_backspace</span> BACK TO SOURCE DB
+        </button>
+      </div>
+    </div>

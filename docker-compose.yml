@@ -1,0 +1,26 @@
+services:
+  odoo-db-pull:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    # network_mode: host — direct access to local postgres + reachable at http://localhost:${APP_PORT}
+    network_mode: host
+    volumes:
+      # SSH config + keys (read-only staging) — copied to /root/.ssh with fixed perms by entrypoint
+      - ${SSH_CONFIG_PATH:-~/.ssh}:/root/.ssh-host:ro
+      # PostgreSQL unix socket — pg_restore/createdb against local postgres
+      - ${POSTGRES_SOCKET_PATH:-/var/run/postgresql}:/var/run/postgresql
+      # Odoo filestore destination for rsync
+      - ${LOCAL_FILESTORE_PATH:-~/.local/share/Odoo/filestore}:/root/.local/share/Odoo/filestore
+      # Temp space for dump files
+      - /tmp:/tmp
+      # Docker socket — allows the app to run `docker exec` against local containers
+      - /var/run/docker.sock:/var/run/docker.sock
+      # App source — live-reload without rebuilding
+      - ./app:/app/app
+    environment:
+      - APP_PORT=${APP_PORT:-8100}
+      - PGUSER=${PGUSER:-}
+      - LOCAL_FILESTORE_PATH=/root/.local/share/Odoo/filestore
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload --reload-dir /app/app
