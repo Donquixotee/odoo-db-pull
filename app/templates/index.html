@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>Odoo DB Pull</title>
+  <title>Personal Admin Tools · Odoo DB Pull</title>
 
   <!-- AlpineJS -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -33,11 +33,23 @@
   <!-- SIDEBAR (Desktop) -->
   <aside class="h-screen w-64 fixed left-0 top-0 bg-[#10131a] flex flex-col gap-4 p-4 border-r border-[#22262f]/15 font-label text-sm z-40 hidden md:flex pt-8">
     <div class="mb-8 px-2">
-      <h1 class="text-lg font-black text-[#bd9dff] tracking-tighter">Odoo DB Pull</h1>
-      <p class="text-[10px] uppercase tracking-[0.2em] opacity-50 text-[#ecedf6]">Data Architect</p>
+      <h1 class="text-lg font-black text-[#bd9dff] tracking-tighter">Admin Tools</h1>
+      <p class="text-[10px] uppercase tracking-[0.2em] opacity-50 text-[#ecedf6]">Personal Platform</p>
     </div>
     
     <nav class="space-y-2">
+      <div class="mb-5">
+        <p class="px-4 mb-2 text-[10px] uppercase tracking-[0.2em] opacity-40 text-[#ecedf6]">Tools</p>
+        {% for tool in tools %}
+        <a href="{{ tool.route }}"
+           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 {{ 'bg-surface-container-low text-[#ecedf6] font-bold ghost-border' if tool.id == active_tool else 'text-[#ecedf6] opacity-60 hover:opacity-100 hover:bg-[#161a21]' }}">
+          <span class="material-symbols-outlined">apps</span>
+          <span>{{ tool.name }}</span>
+        </a>
+        {% endfor %}
+      </div>
+
+      <p class="px-4 mb-2 text-[10px] uppercase tracking-[0.2em] opacity-40 text-[#ecedf6]">Workflow</p>
       <!-- Nav Item 1 -->
       <div class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
            :class="currentStep === 0 ? 'bg-gradient-to-r from-[#bd9dff] to-[#8a4cfc] text-white shadow-[0_0_15px_rgba(189,157,255,0.3)] font-bold' : 'text-[#ecedf6] opacity-60 hover:opacity-100 hover:bg-[#161a21] cursor-pointer'"
@@ -88,7 +100,7 @@
   <header class="w-full sticky top-0 z-50 bg-[#10131a] flex justify-between items-center px-6 py-4 md:pl-72">
     <div class="flex items-center gap-4">
       <span class="text-xl font-bold tracking-tighter text-[#ecedf6] font-headline md:hidden">Odoo DB Pull</span>
-      <span class="text-xl font-bold tracking-tighter text-[#ecedf6] font-headline hidden md:block">Dashboard</span>
+      <span class="text-xl font-bold tracking-tighter text-[#ecedf6] font-headline hidden md:block">Odoo DB Pull</span>
     </div>
   </header>
 
