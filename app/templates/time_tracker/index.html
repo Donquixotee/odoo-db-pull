@@ -92,10 +92,16 @@
           </label>
 
           <div class="grid grid-cols-2 gap-3">
-            <label class="block">
-              <span class="text-xs text-on-surface-variant">Hours</span>
-              <input x-model="form.hours" type="number" min="0.25" max="24" step="0.25" required class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
-            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block">
+                <span class="text-xs text-on-surface-variant">Hours</span>
+                <input x-model="form.hoursPart" type="number" min="0" max="24" step="1" required class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+              </label>
+              <label class="block">
+                <span class="text-xs text-on-surface-variant">Minutes</span>
+                <input x-model="form.minutesPart" type="number" min="0" max="59" step="1" required class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+              </label>
+            </div>
             <label class="block">
               <span class="text-xs text-on-surface-variant">€/hour</span>
               <input x-model="form.hourly_rate" type="number" min="1" step="0.5" required class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
@@ -154,7 +160,7 @@
                   <div class="text-right">
                     <p class="text-lg font-headline font-bold text-primary" x-text="money(entryAmount(entry))"></p>
                     <p class="text-xs text-on-surface-variant" x-text="dzd(entryAmountDzd(entry))"></p>
-                    <p class="text-xs text-on-surface-variant"><span x-text="entry.hours"></span>h · <span x-text="money(entry.hourly_rate)"></span>/h</p>
+                    <p class="text-xs text-on-surface-variant"><span x-text="durationLabel(entry.hours)"></span> · <span x-text="money(entry.hourly_rate)"></span>/h</p>
                   </div>
                   <div class="flex items-center gap-2">
                     <button type="button" class="w-9 h-9 rounded-lg bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center" title="Toggle paid" @click="togglePaid(entry)">

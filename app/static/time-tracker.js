@@ -20,7 +20,8 @@ function timeTrackerApp() {
       work_date: new Date().toISOString().slice(0, 10),
       task: '',
       notes: '',
-      hours: '',
+      hoursPart: '',
+      minutesPart: '',
       hourly_rate: window.__defaults__?.defaultHourlyRate ?? 7.5,
       status: 'sent',
       paid: false,
@@ -69,11 +70,16 @@ function timeTrackerApp() {
     async save() {
       this.saving = true;
       this.error = null;
+      if (this.durationToDecimal() <= 0) {
+        this.error = 'Duration must be greater than zero';
+        this.saving = false;
+        return;
+      }
       const payload = {
         work_date: this.form.work_date,
         task: this.form.task.trim(),
         notes: this.form.notes.trim(),
-        hours: Number(this.form.hours),
+        hours: this.durationToDecimal(),
         hourly_rate: Number(this.form.hourly_rate || 7.5),
         status: this.form.status,
         paid: Boolean(this.form.paid),
@@ -105,7 +111,7 @@ function timeTrackerApp() {
         work_date: entry.work_date,
         task: entry.task,
         notes: entry.notes || '',
-        hours: entry.hours,
+        ...this.decimalToDuration(entry.hours),
         hourly_rate: entry.hourly_rate || 7.5,
         status: entry.status || 'sent',
         paid: Boolean(entry.paid),
@@ -154,7 +160,8 @@ function timeTrackerApp() {
         work_date: new Date().toISOString().slice(0, 10),
         task: '',
         notes: '',
-        hours: '',
+        hoursPart: '',
+        minutesPart: '',
         hourly_rate: window.__defaults__?.defaultHourlyRate ?? 7.5,
         status: 'sent',
         paid: false,
@@ -180,6 +187,28 @@ function timeTrackerApp() {
 
     entryAmountDzd(entry) {
       return this.entryAmount(entry) * Number(this.settings.eur_to_dzd_rate || 0);
+    },
+
+    durationToDecimal() {
+      const hours = Number(this.form.hoursPart || 0);
+      const minutes = Number(this.form.minutesPart || 0);
+      return Number((hours + minutes / 60).toFixed(4));
+    },
+
+    decimalToDuration(value) {
+      const totalMinutes = Math.round(Number(value || 0) * 60);
+      return {
+        hoursPart: Math.floor(totalMinutes / 60),
+        minutesPart: totalMinutes % 60,
+      };
+    },
+
+    durationLabel(value) {
+      const duration = this.decimalToDuration(value);
+      if (!duration.hoursPart && !duration.minutesPart) return '0m';
+      if (!duration.hoursPart) return `${duration.minutesPart}m`;
+      if (!duration.minutesPart) return `${duration.hoursPart}h`;
+      return `${duration.hoursPart}h ${duration.minutesPart}m`;
     },
   };
 }
