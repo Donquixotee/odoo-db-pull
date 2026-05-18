@@ -36,4 +36,12 @@ TOOLS = [
         description="Store frequently used commands, credentials, queries, and notes.",
         icon="content_paste",
     ),
+    ToolDefinition(
+        id="postgres_maintenance",
+        name="Postgres Maintenance",
+        route="/tools/postgres-maintenance",
+        api_prefix="/api/postgres-maintenance",
+        description="Inspect local PostgreSQL databases and run maintenance operations.",
+        icon="database",
+    ),
 ]
