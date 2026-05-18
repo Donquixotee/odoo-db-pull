@@ -28,4 +28,12 @@ TOOLS = [
         description="Track part-time tasks, hours, earnings, and payment status.",
         icon="schedule",
     ),
+    ToolDefinition(
+        id="snippet_vault",
+        name="Snippet Vault",
+        route="/tools/snippet-vault",
+        api_prefix="/api/snippet-vault",
+        description="Store frequently used commands, credentials, queries, and notes.",
+        icon="content_paste",
+    ),
 ]

@@ -26,3 +26,4 @@ build/
 .DS_Store
 Thumbs.db
 time_tracker.json
+snippet_vault.json

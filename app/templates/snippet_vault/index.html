@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Personal Admin Tools · Snippet Vault</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png"/>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <script src="/static/tailwind-config.js"></script>
+  <script src="/static/snippet-vault.js"></script>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30 min-h-screen" x-data="snippetVaultApp()" x-init="init()" x-cloak>
+  <header class="w-full sticky top-0 z-50 bg-[#10131A] border-b border-outline-variant/10 px-4 py-2">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      {% include 'partials/app_brand.html' %}
+      {% include 'partials/top_tool_nav.html' %}
+    </div>
+  </header>
+
+  <main class="pt-8 pb-16 px-6 min-h-[calc(100vh-72px)]">
+    <div class="max-w-7xl mx-auto space-y-6">
+      <div x-show="error" class="p-4 bg-error-container text-on-error-container rounded-xl flex items-center gap-3 text-sm border border-error-dim/30">
+        <span class="material-symbols-outlined">error</span>
+        <span x-text="error"></span>
+      </div>
+
+      <section class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 class="text-2xl font-headline font-bold text-on-surface">Snippet Vault</h1>
+          <p class="text-sm text-on-surface-variant mt-1">Commands, credentials, queries, and technical notes.</p>
+        </div>
+        <button type="button" class="h-11 px-4 rounded-lg bg-primary text-on-primary-fixed font-bold flex items-center justify-center gap-2" @click="newNote()">
+          <span class="material-symbols-outlined text-sm">add</span>
+          <span>Add note</span>
+        </button>
+      </section>
+
+      <section class="bg-surface-container-low rounded-lg p-4 ghost-border space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4">
+          <label class="relative block">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-base">search</span>
+            <input x-model="search" class="w-full bg-surface-container-lowest border-none rounded-lg py-3 pl-10 pr-3 text-on-surface focus:ring-1 focus:ring-primary" placeholder="Search notes, commands, tags..."/>
+          </label>
+          <div class="text-sm text-on-surface-variant flex items-center lg:justify-end">
+            <span x-text="`${filteredNotes.length} of ${notes.length} notes`"></span>
+          </div>
+        </div>
+
+        <div class="flex gap-2 overflow-x-auto no-scrollbar">
+          <template x-for="type in types" :key="type.id">
+            <button type="button"
+                    class="h-10 shrink-0 px-3 rounded-lg flex items-center gap-2 text-sm transition-all"
+                    :class="selectedType === type.id ? 'bg-primary text-on-primary-fixed font-bold' : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest'"
+                    @click="selectedType = type.id">
+              <span class="material-symbols-outlined text-[18px]" x-text="type.icon"></span>
+              <span x-text="type.label"></span>
+              <span class="text-xs opacity-70" x-text="typeCounts[type.id] || 0"></span>
+            </button>
+          </template>
+        </div>
+      </section>
+
+      <section x-show="formOpen" class="bg-surface-container-low rounded-lg p-5 ghost-border">
+        <form class="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4" @submit.prevent="save()">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-base font-headline font-bold text-on-surface" x-text="form.id ? 'Edit note' : 'Add note'"></h2>
+              <button type="button" class="text-sm text-on-surface-variant hover:text-primary" @click="formOpen = false">Close</button>
+            </div>
+            <label class="block">
+              <span class="text-xs text-on-surface-variant">Title</span>
+              <input x-model="form.title" required class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+            </label>
+            <label class="block">
+              <span class="text-xs text-on-surface-variant">Type</span>
+              <select x-model="form.type" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary">
+                <option value="ssh">SSH</option>
+                <option value="database">Database</option>
+                <option value="command">Command</option>
+                <option value="credential">Credential</option>
+                <option value="query">Query</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-xs text-on-surface-variant">Tags</span>
+              <input x-model="form.tagsText" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary" placeholder="ifri, ssh, production"/>
+            </label>
+            <button type="submit" class="w-full h-11 rounded-lg bg-primary text-on-primary-fixed font-bold flex items-center justify-center gap-2 disabled:opacity-50" :disabled="saving">
+              <span class="material-symbols-outlined text-sm">save</span>
+              <span x-text="saving ? 'Saving...' : 'Save note'"></span>
+            </button>
+          </div>
+          <label class="block">
+            <span class="text-xs text-on-surface-variant">Content</span>
+            <textarea x-model="form.content" required rows="14" class="mt-1 w-full h-[calc(100%-20px)] min-h-72 bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface font-mono text-sm focus:ring-1 focus:ring-primary"></textarea>
+          </label>
+        </form>
+      </section>
+
+      <div x-show="loading" class="p-8 text-center text-on-surface-variant">Loading notes...</div>
+      <div x-show="!loading && !filteredNotes.length" class="p-8 text-center text-on-surface-variant">No notes found.</div>
+
+      <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" x-show="!loading && filteredNotes.length">
+        <template x-for="note in filteredNotes" :key="note.id">
+          <article class="bg-surface-container-low rounded-lg ghost-border overflow-hidden flex flex-col min-h-[320px]">
+            <div class="p-4 border-b border-outline-variant/10 space-y-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 text-on-surface">
+                    <span class="material-symbols-outlined text-primary text-[18px]" x-text="icon(note.type)"></span>
+                    <h2 class="font-bold leading-snug break-words" x-text="note.title"></h2>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button type="button" class="w-8 h-8 rounded-lg bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center" title="Edit" @click="edit(note)">
+                    <span class="material-symbols-outlined text-sm">edit</span>
+                  </button>
+                  <button type="button" class="w-8 h-8 rounded-lg bg-error-container/40 text-on-error-container hover:bg-error-container flex items-center justify-center" title="Delete" @click="remove(note)">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                  </button>
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="px-2 py-1 rounded text-[11px] uppercase tracking-widest" :class="typeClass(note.type)" x-text="note.type"></span>
+                <template x-for="tag in note.tags" :key="tag">
+                  <span class="px-2 py-1 rounded bg-surface-container-highest text-[11px] text-on-surface-variant" x-text="tag"></span>
+                </template>
+              </div>
+            </div>
+
+            <div class="p-4 space-y-3 flex-1 flex flex-col">
+              <pre class="text-sm bg-surface-container-lowest p-3 rounded-lg overflow-auto whitespace-pre-wrap break-words font-mono text-on-surface max-h-64" x-text="note.content"></pre>
+
+              <div class="space-y-2" x-show="commands(note).length">
+                <p class="text-xs uppercase tracking-[0.2em] text-on-surface-variant">Quick Copy</p>
+                <template x-for="(command, index) in commands(note)" :key="`${note.id}-${index}`">
+                  <div class="flex items-center gap-2 bg-surface-container-high rounded-lg p-2">
+                    <code class="flex-1 text-xs font-mono truncate text-on-surface-variant" x-text="command"></code>
+                    <button type="button" class="w-7 h-7 rounded bg-surface-container-highest hover:text-primary flex items-center justify-center" @click="copy(command, `${note.id}-${index}`)">
+                      <span class="material-symbols-outlined text-sm" x-text="copiedId === `${note.id}-${index}` ? 'check' : 'content_copy'"></span>
+                    </button>
+                  </div>
+                </template>
+              </div>
+
+              <button type="button" class="mt-auto w-full h-10 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold flex items-center justify-center gap-2" @click="copy(note.content, note.id)">
+                <span class="material-symbols-outlined text-sm" x-text="copiedId === note.id ? 'check' : 'content_copy'"></span>
+                <span x-text="copiedId === note.id ? 'Copied' : 'Copy all'"></span>
+              </button>
+            </div>
+          </article>
+        </template>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
