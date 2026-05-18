@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Personal Admin Tools · Time Tracker</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png"/>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <script src="/static/tailwind-config.js"></script>
+  <script src="/static/time-tracker.js"></script>
+  <script>
+    window.__defaults__ = {
+      defaultHourlyRate: {{ default_hourly_rate }},
+      defaultEurToDzdRate: {{ default_eur_to_dzd_rate }},
+    };
+  </script>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30 min-h-screen" x-data="timeTrackerApp()" x-init="init()" x-cloak>
+  <header class="w-full sticky top-0 z-50 bg-[#10131A] border-b border-outline-variant/10 px-4 py-2">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      {% include 'partials/app_brand.html' %}
+      {% include 'partials/top_tool_nav.html' %}
+    </div>
+  </header>
+
+  <main class="pt-8 pb-16 px-6 min-h-[calc(100vh-72px)]">
+    <div class="max-w-6xl mx-auto space-y-6">
+      <div x-show="error" class="p-4 bg-error-container text-on-error-container rounded-xl flex items-center gap-3 text-sm border border-error-dim/30">
+        <span class="material-symbols-outlined">error</span>
+        <span x-text="error"></span>
+      </div>
+
+      <section class="bg-surface-container-low rounded-lg p-4 ghost-border flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Exchange Rate</p>
+          <p class="text-sm text-on-surface mt-1">EUR to DZD conversion for earnings totals</p>
+        </div>
+        <form class="flex items-end gap-3" @submit.prevent="saveRate()">
+          <label class="block">
+            <span class="text-xs text-on-surface-variant">1 EUR =</span>
+            <input x-model="settings.eur_to_dzd_rate" type="number" min="1" max="10000" step="0.01" class="mt-1 w-36 bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+          </label>
+          <span class="pb-3 text-sm text-on-surface-variant">DZD</span>
+          <button type="submit" class="h-11 px-4 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">save</span>
+            <span>Save</span>
+          </button>
+        </form>
+      </section>
+
+      <section class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="bg-surface-container-low rounded-lg p-4 ghost-border">
+          <p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Hours</p>
+          <p class="text-2xl font-headline font-bold text-on-surface mt-1" x-text="summary.total_hours"></p>
+        </div>
+        <div class="bg-surface-container-low rounded-lg p-4 ghost-border">
+          <p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Total</p>
+          <p class="text-2xl font-headline font-bold text-primary mt-1" x-text="money(summary.total_amount)"></p>
+          <p class="text-xs text-on-surface-variant mt-1" x-text="dzd(summary.total_amount_dzd)"></p>
+        </div>
+        <div class="bg-surface-container-low rounded-lg p-4 ghost-border">
+          <p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Unpaid</p>
+          <p class="text-2xl font-headline font-bold text-yellow-300 mt-1" x-text="money(summary.unpaid_amount)"></p>
+          <p class="text-xs text-on-surface-variant mt-1" x-text="dzd(summary.unpaid_amount_dzd)"></p>
+        </div>
+        <div class="bg-surface-container-low rounded-lg p-4 ghost-border">
+          <p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Tasks</p>
+          <p class="text-2xl font-headline font-bold text-on-surface mt-1" x-text="summary.entry_count"></p>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-6 items-start">
+        <form class="bg-surface-container-low rounded-lg p-5 ghost-border space-y-4" @submit.prevent="save()">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-base font-headline font-bold text-on-surface" x-text="form.id ? 'Edit record' : 'New record'"></h2>
+            <button type="button" class="text-xs text-on-surface-variant hover:text-primary" x-show="form.id" @click="resetForm()">Cancel</button>
+          </div>
+
+          <label class="block">
+            <span class="text-xs text-on-surface-variant">Date</span>
+            <input x-model="form.work_date" type="date" required class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+          </label>
+
+          <label class="block">
+            <span class="text-xs text-on-surface-variant">Task</span>
+            <input x-model="form.task" required maxlength="160" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary" placeholder="Fix report export, update module..."/>
+          </label>
+
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="text-xs text-on-surface-variant">Hours</span>
+              <input x-model="form.hours" type="number" min="0.25" max="24" step="0.25" required class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+            </label>
+            <label class="block">
+              <span class="text-xs text-on-surface-variant">€/hour</span>
+              <input x-model="form.hourly_rate" type="number" min="1" step="0.5" required class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="text-xs text-on-surface-variant">Status</span>
+              <select x-model="form.status" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary">
+                <option value="assigned">Assigned</option>
+                <option value="in_progress">In progress</option>
+                <option value="sent">Sent</option>
+                <option value="accepted">Accepted</option>
+              </select>
+            </label>
+            <label class="flex items-end gap-3 rounded-lg bg-surface-container-lowest p-3 mt-5">
+              <input x-model="form.paid" type="checkbox" class="rounded bg-transparent text-primary focus:ring-primary"/>
+              <span class="text-sm text-on-surface">Paid</span>
+            </label>
+          </div>
+
+          <label class="block">
+            <span class="text-xs text-on-surface-variant">Notes</span>
+            <textarea x-model="form.notes" rows="4" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary" placeholder="What you sent, links, details..."></textarea>
+          </label>
+
+          <button type="submit" class="w-full h-11 rounded-lg bg-primary text-on-primary-fixed font-bold flex items-center justify-center gap-2 disabled:opacity-50" :disabled="saving">
+            <span class="material-symbols-outlined text-sm" x-text="form.id ? 'save' : 'add'"></span>
+            <span x-text="saving ? 'Saving...' : (form.id ? 'Save changes' : 'Add record')"></span>
+          </button>
+        </form>
+
+        <section class="bg-surface-container-low rounded-lg ghost-border overflow-hidden">
+          <div class="px-5 py-4 border-b border-outline-variant/10 flex items-center justify-between">
+            <h2 class="text-base font-headline font-bold text-on-surface">Records</h2>
+            <button type="button" class="text-sm text-primary hover:text-primary-container" @click="load()">Refresh</button>
+          </div>
+
+          <div x-show="loading" class="p-8 text-center text-on-surface-variant">Loading records...</div>
+          <div x-show="!loading && !entries.length" class="p-8 text-center text-on-surface-variant">No records yet.</div>
+
+          <div class="divide-y divide-outline-variant/10" x-show="!loading && entries.length">
+            <template x-for="entry in entries" :key="entry.id">
+              <article class="p-5 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 hover:bg-surface-container-high/40 transition-colors">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2 mb-2">
+                    <span class="text-xs font-mono text-on-surface-variant" x-text="entry.work_date"></span>
+                    <span class="px-2 py-1 rounded bg-surface-container-highest text-[11px] uppercase tracking-widest text-on-surface-variant" x-text="entry.status.replace('_', ' ')"></span>
+                    <span class="px-2 py-1 rounded text-[11px] uppercase tracking-widest" :class="entry.paid ? 'bg-green-500/15 text-green-300' : 'bg-yellow-500/15 text-yellow-300'" x-text="entry.paid ? 'Paid' : 'Unpaid'"></span>
+                  </div>
+                  <h3 class="text-on-surface font-bold leading-snug break-words" x-text="entry.task"></h3>
+                  <p class="text-sm text-on-surface-variant mt-2 whitespace-pre-wrap break-words" x-show="entry.notes" x-text="entry.notes"></p>
+                </div>
+                <div class="flex lg:flex-col items-center lg:items-end justify-between gap-3">
+                  <div class="text-right">
+                    <p class="text-lg font-headline font-bold text-primary" x-text="money(entryAmount(entry))"></p>
+                    <p class="text-xs text-on-surface-variant" x-text="dzd(entryAmountDzd(entry))"></p>
+                    <p class="text-xs text-on-surface-variant"><span x-text="entry.hours"></span>h · <span x-text="money(entry.hourly_rate)"></span>/h</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button type="button" class="w-9 h-9 rounded-lg bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center" title="Toggle paid" @click="togglePaid(entry)">
+                      <span class="material-symbols-outlined text-sm" x-text="entry.paid ? 'payments' : 'pending_actions'"></span>
+                    </button>
+                    <button type="button" class="w-9 h-9 rounded-lg bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center" title="Edit" @click="edit(entry)">
+                      <span class="material-symbols-outlined text-sm">edit</span>
+                    </button>
+                    <button type="button" class="w-9 h-9 rounded-lg bg-error-container/40 text-on-error-container hover:bg-error-container flex items-center justify-center" title="Delete" @click="remove(entry)">
+                      <span class="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </div>
+                </div>
+              </article>
+            </template>
+          </div>
+        </section>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

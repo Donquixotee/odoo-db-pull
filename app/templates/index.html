@@ -4,6 +4,7 @@
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>Personal Admin Tools · Odoo DB Pull</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png"/>
 
   <!-- AlpineJS -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -31,24 +32,8 @@
 <body class="bg-background text-on-background font-body selection:bg-primary/30 min-h-screen" x-data="pullApp()" x-init="init()" x-cloak>
 
   <!-- SIDEBAR (Desktop) -->
-  <aside class="h-screen w-64 fixed left-0 top-0 bg-[#10131a] flex flex-col gap-4 p-4 border-r border-[#22262f]/15 font-label text-sm z-40 hidden md:flex pt-8">
-    <div class="mb-8 px-2">
-      <h1 class="text-lg font-black text-[#bd9dff] tracking-tighter">Admin Tools</h1>
-      <p class="text-[10px] uppercase tracking-[0.2em] opacity-50 text-[#ecedf6]">Personal Platform</p>
-    </div>
-    
+  <aside class="fixed left-0 top-[81px] h-[calc(100vh-81px)] w-64 bg-[#10131a] flex-col gap-4 p-4 border-r border-[#22262f]/15 font-label text-sm z-40 hidden md:flex pt-5">
     <nav class="space-y-2">
-      <div class="mb-5">
-        <p class="px-4 mb-2 text-[10px] uppercase tracking-[0.2em] opacity-40 text-[#ecedf6]">Tools</p>
-        {% for tool in tools %}
-        <a href="{{ tool.route }}"
-           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 {{ 'bg-surface-container-low text-[#ecedf6] font-bold ghost-border' if tool.id == active_tool else 'text-[#ecedf6] opacity-60 hover:opacity-100 hover:bg-[#161a21]' }}">
-          <span class="material-symbols-outlined">apps</span>
-          <span>{{ tool.name }}</span>
-        </a>
-        {% endfor %}
-      </div>
-
       <p class="px-4 mb-2 text-[10px] uppercase tracking-[0.2em] opacity-40 text-[#ecedf6]">Workflow</p>
       <!-- Nav Item 1 -->
       <div class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
@@ -97,10 +82,10 @@
   </aside>
 
   <!-- TOP APP BAR -->
-  <header class="w-full sticky top-0 z-50 bg-[#10131a] flex justify-between items-center px-6 py-4 md:pl-72">
-    <div class="flex items-center gap-4">
-      <span class="text-xl font-bold tracking-tighter text-[#ecedf6] font-headline md:hidden">Odoo DB Pull</span>
-      <span class="text-xl font-bold tracking-tighter text-[#ecedf6] font-headline hidden md:block">Odoo DB Pull</span>
+  <header class="w-full sticky top-0 z-50 bg-[#10131A] border-b border-outline-variant/10 px-4 py-2">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      {% include 'partials/app_brand.html' %}
+      {% include 'partials/top_tool_nav.html' %}
     </div>
   </header>
 
