@@ -28,3 +28,5 @@ Thumbs.db
 time_tracker.json
 snippet_vault.json
 postgres_maintenance.json
+app/data/*.json
+!app/data/.gitkeep

@@ -35,7 +35,7 @@ Features:
 
 ### Snippet Vault
 
-Replacement for the previous `auth_sheet` Next.js app, rebuilt in FastAPI/Jinja/Alpine and integrated into this platform.
+Replacement for a previous local Next.js notes app, rebuilt in FastAPI/Jinja/Alpine and integrated into this platform.
 
 Features:
 - Stores frequently used SSH commands, credentials, SQL queries, paths, notes, and technical snippets.
@@ -44,7 +44,7 @@ Features:
 - Copy full content.
 - Quick-copy extracted commands/queries.
 - Add, edit, and delete notes.
-- Seeded from `/media/sofiane/NewVolume/dev/auth_sheet/app/page.tsx`.
+- Seeded from a previous local Next.js notes app.
 - JSON persistence in `app/data/snippet_vault.json`.
 
 ### Postgres Maintenance
