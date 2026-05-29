@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Personal Admin Tools · Odoo Cron Debugger</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png"/>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <script src="/static/tailwind-config.js"></script>
+  <script src="/static/odoo-cron-debugger.js"></script>
+  <script>
+    window.__defaults__ = {
+      defaultPgUser: "{{ default_pg_user }}",
+    };
+  </script>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30 min-h-screen" x-data="odooCronDebuggerApp()" x-init="init()" x-cloak>
+  <header class="w-full sticky top-0 z-50 bg-[#10131A] border-b border-outline-variant/10 px-4 py-2">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      {% include 'partials/app_brand.html' %}
+      {% include 'partials/top_tool_nav.html' %}
+    </div>
+  </header>
+
+  <main class="pt-8 pb-16 px-6 min-h-[calc(100vh-72px)]">
+    <div class="max-w-7xl mx-auto space-y-6">
+      <section class="flex flex-col gap-2">
+        <h1 class="text-2xl font-headline font-bold text-on-surface">Odoo Cron Debugger</h1>
+        <p class="text-sm text-on-surface-variant">Find idle cron transactions, inspect sessions, and terminate blocked PostgreSQL backends.</p>
+      </section>
+
+      <div x-show="error" class="p-4 bg-error-container text-on-error-container rounded-xl flex items-center gap-3 text-sm border border-error-dim/30">
+        <span class="material-symbols-outlined">error</span>
+        <span x-text="error"></span>
+      </div>
+      <div x-show="message" class="p-4 bg-green-500/10 text-green-300 rounded-xl flex items-center gap-3 text-sm border border-green-500/20">
+        <span class="material-symbols-outlined">check_circle</span>
+        <span x-text="message"></span>
+      </div>
+
+      <section class="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-start">
+        <div class="bg-surface-container-low rounded-lg p-5 ghost-border space-y-5">
+          <div>
+            <h2 class="text-base font-headline font-bold text-on-surface">Connection</h2>
+            <p class="text-xs text-on-surface-variant mt-1">Connect to native PostgreSQL or a local Docker Postgres container.</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" class="h-10 rounded-lg font-bold text-sm" :class="target.mode === 'native' ? 'bg-primary text-on-primary-fixed' : 'bg-surface-container-high text-on-surface-variant'" @click="target.mode = 'native'">Native</button>
+            <button type="button" class="h-10 rounded-lg font-bold text-sm" :class="target.mode === 'docker' ? 'bg-primary text-on-primary-fixed' : 'bg-surface-container-high text-on-surface-variant'" @click="target.mode = 'docker'; loadDockerContainers()">Docker</button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3" x-show="target.mode === 'native'">
+            <label class="block">
+              <span class="text-xs text-on-surface-variant">Host</span>
+              <input x-model="target.pg_host" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+            </label>
+            <label class="block">
+              <span class="text-xs text-on-surface-variant">Port</span>
+              <input x-model="target.pg_port" type="number" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+            </label>
+          </div>
+
+          <label class="block" x-show="target.mode === 'docker'">
+            <span class="text-xs text-on-surface-variant">Container</span>
+            <select x-model="target.docker_container" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary">
+              <option value="">Select container</option>
+              <template x-for="container in dockerContainers" :key="container.name">
+                <option :value="container.name" x-text="`${container.name} · ${container.image}`"></option>
+              </template>
+            </select>
+          </label>
+
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="text-xs text-on-surface-variant">User</span>
+              <input x-model="target.pg_user" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+            </label>
+            <label class="block">
+              <span class="text-xs text-on-surface-variant">Password</span>
+              <input x-model="target.pg_password" type="password" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-[1fr_auto] gap-3 items-end">
+            <label class="block min-w-0">
+              <span class="text-xs text-on-surface-variant">Database</span>
+              <input x-model="target.database" list="odooCronDatabases" placeholder="your_database" class="mt-1 w-full bg-surface-container-lowest border-none rounded-lg p-3 text-on-surface focus:ring-1 focus:ring-primary"/>
+              <datalist id="odooCronDatabases">
+                <template x-for="db in databases" :key="db.name">
+                  <option :value="db.name"></option>
+                </template>
+              </datalist>
+            </label>
+            <button type="button" class="h-11 px-4 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold flex items-center gap-2 disabled:opacity-50" :disabled="loading === 'databases'" @click="loadDatabases()">
+              <span class="material-symbols-outlined text-sm">database</span>
+              <span x-text="loading === 'databases' ? 'Loading' : 'Load'"></span>
+            </button>
+          </div>
+
+          <button type="button" class="w-full h-11 rounded-lg bg-primary text-on-primary-fixed font-bold flex items-center justify-center gap-2 disabled:opacity-50" :disabled="loading || !target.database" @click="loadAll()">
+            <span class="material-symbols-outlined text-sm">refresh</span>
+            <span x-text="loading ? 'Working...' : 'Refresh debugger'"></span>
+          </button>
+        </div>
+
+        <div class="space-y-6">
+          <section class="bg-surface-container-low rounded-lg ghost-border overflow-hidden">
+            <div class="px-5 py-4 border-b border-outline-variant/10 flex items-center justify-between gap-3">
+              <div>
+                <h2 class="text-base font-headline font-bold text-on-surface">Stuck Cron Transactions</h2>
+                <p class="text-xs text-on-surface-variant mt-1">Idle transactions matching Odoo cron progress queries.</p>
+              </div>
+              <button type="button" class="h-9 px-3 rounded-lg bg-surface-container-high text-on-surface flex items-center gap-2 disabled:opacity-50" :disabled="loading === 'stuck'" @click="loadStuckCrons()">
+                <span class="material-symbols-outlined text-sm">refresh</span>
+                <span class="text-sm" x-text="loading === 'stuck' ? 'Loading' : 'Load'"></span>
+              </button>
+            </div>
+            <div x-show="!stuckCrons.length" class="p-8 text-center text-on-surface-variant">No stuck cron transactions loaded.</div>
+            <div class="divide-y divide-outline-variant/10" x-show="stuckCrons.length">
+              <template x-for="cron in stuckCrons" :key="cron.pid">
+                <article class="px-5 py-4 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4">
+                  <div class="min-w-0 space-y-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="font-mono text-primary" x-text="`PID ${cron.pid}`"></span>
+                      <span class="px-2 py-1 rounded text-[11px] uppercase tracking-widest bg-red-500/15 text-red-300" x-text="cron.state"></span>
+                      <span class="text-sm text-on-surface-variant" x-text="cron.application_name || 'No app name'"></span>
+                    </div>
+                    <p class="font-mono text-xs text-on-surface-variant break-words" x-text="cron.query_preview"></p>
+                    <p class="text-xs text-on-surface-variant">Transaction <span class="text-on-surface font-mono" x-text="duration(cron.tx_duration_sec)"></span> · Query <span class="text-on-surface font-mono" x-text="duration(cron.query_duration_sec)"></span></p>
+                  </div>
+                  <button type="button" class="h-10 px-3 rounded-lg bg-error text-on-error font-bold flex items-center justify-center gap-2 disabled:opacity-50" :disabled="killingPid === cron.pid" @click="killBackend(cron.pid)">
+                    <span class="material-symbols-outlined text-sm">stop_circle</span>
+                    <span x-text="killingPid === cron.pid ? 'Killing' : 'Kill'"></span>
+                  </button>
+                </article>
+              </template>
+            </div>
+          </section>
+
+          <section class="bg-surface-container-low rounded-lg ghost-border overflow-hidden">
+            <div class="px-5 py-4 border-b border-outline-variant/10 flex items-center justify-between gap-3">
+              <h2 class="text-base font-headline font-bold text-on-surface">Active Sessions</h2>
+              <button type="button" class="h-9 px-3 rounded-lg bg-surface-container-high text-on-surface flex items-center gap-2 disabled:opacity-50" :disabled="loading === 'sessions'" @click="loadActiveSessions()">
+                <span class="material-symbols-outlined text-sm">refresh</span>
+                <span class="text-sm" x-text="loading === 'sessions' ? 'Loading' : 'Load'"></span>
+              </button>
+            </div>
+            <div x-show="!activeSessions.length" class="p-8 text-center text-on-surface-variant">No active sessions loaded.</div>
+            <div class="divide-y divide-outline-variant/10 max-h-[520px] overflow-y-auto custom-scrollbar" x-show="activeSessions.length">
+              <template x-for="session in activeSessions" :key="session.pid">
+                <article class="px-5 py-4 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4">
+                  <div class="min-w-0 space-y-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="font-mono text-primary" x-text="`PID ${session.pid}`"></span>
+                      <span class="px-2 py-1 rounded text-[11px] uppercase tracking-widest" :class="stateClass(session.state)" x-text="session.state"></span>
+                      <span class="text-sm text-on-surface-variant" x-text="session.application_name || 'No app name'"></span>
+                    </div>
+                    <p class="font-mono text-xs text-on-surface-variant break-words" x-text="session.query_preview"></p>
+                    <p class="text-xs text-on-surface-variant">Transaction <span class="text-on-surface font-mono" x-text="duration(session.tx_duration_sec)"></span> · Query <span class="text-on-surface font-mono" x-text="duration(session.query_duration_sec)"></span></p>
+                  </div>
+                  <button type="button" class="h-10 px-3 rounded-lg bg-error text-on-error font-bold flex items-center justify-center gap-2 disabled:opacity-50" :disabled="killingPid === session.pid" @click="killBackend(session.pid)">
+                    <span class="material-symbols-outlined text-sm">stop_circle</span>
+                    <span x-text="killingPid === session.pid ? 'Killing' : 'Kill'"></span>
+                  </button>
+                </article>
+              </template>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="bg-surface-container-low rounded-lg ghost-border overflow-hidden">
+        <div class="px-5 py-4 border-b border-outline-variant/10 flex items-center justify-between gap-3">
+          <h2 class="text-base font-headline font-bold text-on-surface">Recent Odoo Crons</h2>
+          <button type="button" class="h-9 px-3 rounded-lg bg-surface-container-high text-on-surface flex items-center gap-2 disabled:opacity-50" :disabled="loading === 'recent'" @click="loadRecentCrons()">
+            <span class="material-symbols-outlined text-sm">refresh</span>
+            <span class="text-sm" x-text="loading === 'recent' ? 'Loading' : 'Load'"></span>
+          </button>
+        </div>
+        <div x-show="!recentCrons.length" class="p-8 text-center text-on-surface-variant">No cron records loaded.</div>
+        <div class="divide-y divide-outline-variant/10 max-h-[520px] overflow-y-auto custom-scrollbar" x-show="recentCrons.length">
+          <template x-for="cron in recentCrons" :key="cron.id">
+            <article class="px-5 py-4 space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-mono text-primary" x-text="`#${cron.id}`"></span>
+                <span class="font-bold text-on-surface" x-text="cron.name"></span>
+                <span class="px-2 py-1 rounded text-[11px] uppercase tracking-widest" :class="cron.active ? 'bg-green-500/15 text-green-300' : 'bg-surface-container-highest text-on-surface-variant'" x-text="cron.active ? 'active' : 'inactive'"></span>
+              </div>
+              <p class="font-mono text-xs text-on-surface-variant break-words" x-text="cron.code_preview"></p>
+              <p class="text-xs text-on-surface-variant">Last <span class="text-on-surface font-mono" x-text="cron.lastcall"></span> · Next <span class="text-on-surface font-mono" x-text="cron.nextcall || '-'"></span></p>
+            </article>
+          </template>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

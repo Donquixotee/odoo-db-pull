@@ -65,6 +65,19 @@ Features:
 
 Note: `VACUUM ANALYZE` does not necessarily shrink disk usage. It marks space reusable and updates planner statistics; database size may stay the same or increase slightly.
 
+### Odoo Cron Debugger
+
+Inspect Odoo cron activity and stuck PostgreSQL sessions during module update/debug workflows.
+
+Features:
+- Native local PostgreSQL target.
+- Local Docker PostgreSQL target.
+- Database discovery.
+- Stuck cron transaction detection from `pg_stat_activity`.
+- Active session inspection.
+- Recent `ir_cron` record inspection.
+- Backend termination by PID.
+
 ## Tech Stack
 
 - Backend: Python 3.11, FastAPI, Pydantic
@@ -89,12 +102,14 @@ app/
   static/
     app.js
     postgres-maintenance.js
+    odoo-cron-debugger.js
     snippet-vault.js
     time-tracker.js
     logo-dark.png
     favicon.png
   templates/
     partials/
+    odoo_cron_debugger/
     postgres_maintenance/
     snippet_vault/
     steps/
@@ -102,6 +117,7 @@ app/
     index.html
   tools/
     odoo_db_pull/
+    odoo_cron_debugger/
     postgres_maintenance/
     snippet_vault/
     time_tracker/

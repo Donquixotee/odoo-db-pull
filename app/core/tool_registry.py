@@ -44,4 +44,12 @@ TOOLS = [
         description="Inspect local PostgreSQL databases and run maintenance operations.",
         icon="database",
     ),
+    ToolDefinition(
+        id="odoo_cron_debugger",
+        name="Odoo Cron Debugger",
+        route="/tools/odoo-cron-debugger",
+        api_prefix="/api/odoo-cron-debugger",
+        description="Monitor and kill stuck Odoo crons blocking module updates.",
+        icon="timer_off",
+    ),
 ]
